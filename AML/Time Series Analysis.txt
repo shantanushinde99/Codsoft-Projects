@@ -1,0 +1,91 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from statsmodels.tsa.stattools import adfuller
+from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+import seaborn as sns
+import warnings
+import pmdarima as pm
+from statsmodels.tsa.arima.model import ARIMA
+
+warnings.filterwarnings("ignore")
+
+# Load the dataset
+data = pd.read_csv("AirPassengers.csv", header=0, index_col=0, parse_dates=True)
+print("Data Preview:\n", data.head())
+
+# A. Check for stationarity
+result = adfuller(data)
+print("\nDickey-Fuller Test on Original Data:")
+print('ADF Statistic: %f' % result[0])
+print('p-value: %f' % result[1])
+print('Critical Values:')
+for key, value in result[4].items():
+    print('\t%s: %.3f' % (key, value))
+
+# B. Convert to stationary
+stationary_data = data.diff().dropna()
+
+# Check again for stationarity
+result = adfuller(stationary_data)
+print("\nDickey-Fuller Test on Differenced Data:")
+print('ADF Statistic: %f' % result[0])
+print('p-value: %f' % result[1])
+print('Critical Values:')
+for key, value in result[4].items():
+    print('\t%s: %.3f' % (key, value))
+
+# C. Plot ACF and PACF
+plt.figure(figsize=(12, 6))
+plt.subplot(121)
+plot_acf(stationary_data, ax=plt.gca())
+plt.subplot(122)
+plot_pacf(stationary_data, ax=plt.gca())
+plt.tight_layout()
+plt.show()
+
+# D. Plot the original data
+plt.figure(figsize=(10, 6))
+plt.plot(data.index, data["#Passengers"])
+plt.title("Airline Passengers Over Time")
+plt.xlabel("Year")
+plt.ylabel("Number of Passengers")
+plt.grid(True)
+plt.show()
+
+# E. Auto ARIMA
+print("\nAuto ARIMA model fitting:")
+auto_model = pm.auto_arima(data, seasonal=False, stepwise=True,
+                           suppress_warnings=True, trace=True,
+                           error_action='ignore', information_criterion='aic')
+print("Optimal (p, d, q) values:", auto_model.order)
+
+# Fit ARIMA model with selected order
+model = ARIMA(data, order=auto_model.order)
+model_fit = model.fit()
+
+# Plot actual vs fitted
+plt.figure(figsize=(10, 6))
+plt.plot(stationary_data, label="Actual (Differenced)")
+plt.plot(model_fit.fittedvalues, color='red', label="Fitted (ARIMA)")
+plt.title("ARIMA - Airline Passengers")
+plt.xlabel("Year")
+plt.ylabel("Passengers")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# F. Forecast future values
+forecast = model_fit.forecast(steps=10)
+print("\nForecasted next 10 values:\n", forecast)
+
+
+This code demonstrates a comprehensive workflow for time series analysis and forecasting using the ARIMA (AutoRegressive Integrated Moving Average) model. The dataset used contains monthly totals of international airline passengers from 1949 to 1960. The analysis begins by importing the dataset and parsing the date column as the index to prepare it for time series operations. The initial step in time series modeling is checking for stationarity, a critical assumption for ARIMA models. Stationarity implies that the mean, variance, and autocorrelation structure of the series remain constant over time. To test for stationarity, the Augmented Dickey-Fuller (ADF) test is used. A high p-value indicates non-stationarity, which is common in real-world time series due to trends or seasonality.
+
+To make the data stationary, first-order differencing is applied by subtracting each data point from its previous value. The differenced series is then re-evaluated using the ADF test to confirm improved stationarity. To help identify suitable ARIMA parameters — p (autoregressive term), d (differencing), and q (moving average term) — the ACF (Autocorrelation Function) and PACF (Partial Autocorrelation Function) plots are generated. These plots provide visual clues for selecting p and q by showing how current values correlate with their lagged values.
+
+Next, the original time series is plotted to visualize passenger growth over the years, showing clear seasonal trends and upward movement. To automate the selection of the best ARIMA configuration, the code utilizes Auto ARIMA from the pmdarima library. This function tests various combinations of p, d, and q, selecting the one with the lowest Akaike Information Criterion (AIC), which balances model fit and complexity. After identifying the optimal order, the ARIMA model is trained on the dataset using statsmodels.
+
+The model's fit is visualized by plotting the actual differenced data and the fitted values from the ARIMA model. This allows a visual check of how well the model captures the dynamics of the time series. Finally, the model is used to forecast future values, and the next 10 predicted passenger counts are displayed. These forecasts can help in strategic decision-making such as resource planning, marketing, and capacity management.
+
+In summary, the code effectively demonstrates how to process, analyze, and forecast time series data using ARIMA modeling. It covers essential steps such as stationarity testing, differencing, parameter identification, model fitting, and future prediction — making it a complete template for time series forecasting in domains like finance, economics, and operations.

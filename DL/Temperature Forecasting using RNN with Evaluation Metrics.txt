@@ -1,0 +1,184 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import SimpleRNN, Dense
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
+# Load dataset
+df = pd.read_csv(r"C:\Users\HP\Documents\Deep Learning\Practicals\Practical no. 9\city_temperature.csv")
+
+# Filter data for a single city 
+city_data = df[df['City'] == 'Washington'] 
+
+# Drop rows with missing temperature
+city_data = city_data.dropna(subset=['AvgTemperature'])
+
+# Create a datetime column
+city_data['Date'] = pd.to_datetime(city_data[['Year', 'Month', 'Day']])
+
+# Sort by date
+city_data = city_data.sort_values('Date')
+
+# Use only AvgTemperature for forecasting
+temperature = city_data['AvgTemperature'].values
+
+# Normalize data 
+scaler = MinMaxScaler()
+temperature = scaler.fit_transform(temperature.reshape(-1, 1)).flatten()
+
+# Create sequences
+def create_sequences(data, window_size):
+    x, y = [], []
+    for i in range(len(data) - window_size):
+        x.append(data[i:i+window_size])
+        y.append(data[i+window_size])
+    return np.array(x), np.array(y)
+
+window_size = 30
+x, y = create_sequences(temperature, window_size)
+
+# Reshape for RNN input [samples, timesteps, features]
+x = x.reshape((x.shape[0], x.shape[1], 1))
+
+# Split into training and test sets
+split = int(0.8 * len(x))
+x_train, x_test = x[:split], x[split:]
+y_train, y_test = y[:split], y[split:]
+
+# Build RNN model
+model = Sequential([
+    SimpleRNN(64, activation='relu', input_shape=(window_size, 1)),
+    Dense(1)
+])
+model.compile(optimizer='adam', loss='mse')
+
+# Train model
+model.fit(x_train, y_train, epochs=20, verbose=1)
+
+# Predict
+y_pred = model.predict(x_test)
+
+# Inverse scale to get actual temperature values
+y_test_actual = scaler.inverse_transform(y_test.reshape(-1, 1))
+y_pred_actual = scaler.inverse_transform(y_pred)
+
+# Evaluation Metrics
+mae = mean_absolute_error(y_test_actual, y_pred_actual)
+rmse = np.sqrt(mean_squared_error(y_test_actual, y_pred_actual))
+r2 = r2_score(y_test_actual, y_pred_actual)
+
+print(f"Mean Absolute Error (MAE): {mae:.2f} °F")
+print(f"Root Mean Squared Error (RMSE): {rmse:.2f} °F")
+print(f"R² Score: {r2:.4f}")
+
+# Plot predictions
+plt.figure(figsize=(10, 5))
+plt.plot(y_test_actual, label='Actual Temperature')
+plt.plot(y_pred_actual, label='Predicted Temperature')
+plt.title('Temperature Forecasting - RNN (Washington)')
+plt.xlabel('Days')
+plt.ylabel('Temperature (°F)')
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import SimpleRNN, Dense
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
+# Load the new dataset
+df = pd.read_csv('/mnt/data/synthetic_temperature_data.csv')
+
+# Check for required columns
+required_columns = {'Year', 'Month', 'Day', 'AvgTemperature'}
+if not required_columns.issubset(df.columns):
+    raise ValueError(f"Dataset must contain the columns: {required_columns}")
+
+# Drop missing values in temperature
+df = df.dropna(subset=['AvgTemperature'])
+
+# Create datetime column
+df['Date'] = pd.to_datetime(df[['Year', 'Month', 'Day']])
+
+# Sort by date
+df = df.sort_values('Date')
+
+# Extract temperature series
+temperature = df['AvgTemperature'].values
+
+# Normalize temperature
+scaler = MinMaxScaler()
+temperature = scaler.fit_transform(temperature.reshape(-1, 1)).flatten()
+
+# Create sequences
+def create_sequences(data, window_size):
+    x, y = [], []
+    for i in range(len(data) - window_size):
+        x.append(data[i:i + window_size])
+        y.append(data[i + window_size])
+    return np.array(x), np.array(y)
+
+window_size = 30
+x, y = create_sequences(temperature, window_size)
+
+# Reshape for RNN input [samples, timesteps, features]
+x = x.reshape((x.shape[0], x.shape[1], 1))
+
+# Split into training and testing sets
+split = int(0.8 * len(x))
+x_train, x_test = x[:split], x[split:]
+y_train, y_test = y[:split], y[split:]
+
+# Build RNN model
+model = Sequential([
+    SimpleRNN(64, activation='relu', input_shape=(window_size, 1)),
+    Dense(1)
+])
+model.compile(optimizer='adam', loss='mse')
+
+# Train the model
+model.fit(x_train, y_train, epochs=20, verbose=1)
+
+# Predict
+y_pred = model.predict(x_test)
+
+# Inverse transform to get actual temperature values
+y_test_actual = scaler.inverse_transform(y_test.reshape(-1, 1))
+y_pred_actual = scaler.inverse_transform(y_pred)
+
+# Evaluation
+mae = mean_absolute_error(y_test_actual, y_pred_actual)
+rmse = np.sqrt(mean_squared_error(y_test_actual, y_pred_actual))
+r2 = r2_score(y_test_actual, y_pred_actual)
+
+print(f"Mean Absolute Error (MAE): {mae:.2f} °F")
+print(f"Root Mean Squared Error (RMSE): {rmse:.2f} °F")
+print(f"R² Score: {r2:.4f}")
+
+# Plotting
+plt.figure(figsize=(10, 5))
+plt.plot(y_test_actual, label='Actual Temperature')
+plt.plot(y_pred_actual, label='Predicted Temperature')
+plt.title('Temperature Forecasting - RNN (Synthetic Data)')
+plt.xlabel('Days')
+plt.ylabel('Temperature (°F)')
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+
+url = "https://raw.githubusercontent.com/jbrownlee/Datasets/master/airline-passengers.csv"
+df = pd.read_csv(url)
+
+
+This code implements a time series forecasting model using a Simple Recurrent Neural Network (RNN) to predict average temperatures based on historical weather data. The dataset is first loaded and checked to ensure it contains the necessary columns (Year, Month, Day, and AvgTemperature). A Date column is created to sort the data chronologically. The temperature values are normalized using MinMaxScaler to scale the data between 0 and 1, which is essential for stable RNN training. Using a sliding window approach, sequences of 30 days are created as input, and the next day's temperature serves as the prediction target. These sequences are reshaped to match the RNN input format: [samples, timesteps, features].
+
+The model consists of a SimpleRNN layer with 64 units and ReLU activation, followed by a dense output layer that predicts the next temperature value. It is compiled using the adam optimizer and mean squared error as the loss function. After training the model on 80% of the data for 20 epochs, predictions are made on the remaining 20%. The predicted and actual temperature values are inverse-transformed to the original scale for evaluation. Metrics such as Mean Absolute Error (MAE), Root Mean Squared Error (RMSE), and R² Score assess the model’s performance. Finally, a plot visually compares predicted vs. actual temperature trends, showing how effectively the RNN captures temporal patterns in synthetic temperature data.

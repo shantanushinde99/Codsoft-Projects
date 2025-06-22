@@ -1,0 +1,26 @@
+import pandas as py
+from sklearn.model_selection import train_test_split
+
+file = "ObesityDataSet_raw_and_data_sinthetic.csv"
+data = py.read_csv(file)
+
+print("Dataset Preview:\n", data.head(), "\n")
+
+X = data.drop(columns=['NObeyesdad'])  
+y = data['NObeyesdad']                
+
+X_encoded = py.get_dummies(X)
+
+X_train, X_test, y_train, y_test = train_test_split(X_encoded, y, test_size=0.3, random_state=42)
+
+print("Training set shape:", X_train.shape)
+print("Testing set shape:", X_test.shape)
+
+
+The provided Python code performs essential data preprocessing steps required before building a deep learning model using the Obesity dataset. It begins by importing necessary libraries — pandas for handling and manipulating the dataset, and train_test_split from sklearn.model_selection for splitting the data into training and testing sets. The dataset, named "ObesityDataSet_raw_and_data_sinthetic.csv", is loaded into a DataFrame using pandas.read_csv(), which gives a structured tabular representation of the data. A preview of the dataset is printed using data.head() to inspect the first few rows, allowing the developer to understand the types of features and identify the target column.
+
+The next step involves separating the dataset into features and labels. The drop() function is used to remove the target column NObeyesdad from the features (X), and this target column is stored separately in y. Since deep learning models cannot process categorical text data directly, the features are transformed using one-hot encoding with get_dummies(). This technique converts all categorical columns into binary vectors, allowing the model to interpret and process non-numeric data effectively.
+
+After encoding, the dataset is divided into training and testing sets using the train_test_split() function. Here, 70% of the data is reserved for training and 30% for testing. The parameter random_state=42 ensures that the split remains consistent every time the code runs, which is important for reproducibility. Finally, the shapes of the training and testing datasets are printed to confirm that the data has been split correctly and to inspect the number of samples and features in each set.
+
+Overall, this preprocessing code ensures that the dataset is clean, appropriately formatted, and ready for training a deep learning classification model. Steps like one-hot encoding and proper train-test splitting are fundamental to prevent data leakage, handle categorical variables, and ensure that the model generalizes well. These are key practices in any machine learning or deep learning pipeline.

@@ -1,0 +1,85 @@
+import numpy
+import matplotlib.pyplot as plt
+import pandas as pd
+
+dataset = pd.read_csv('GroceryStoreDataSet.csv')
+
+dataset = pd.read_csv('GroceryStoreDataSet.csv', names=["products"])
+print(dataset)
+
+print()
+
+print(dataset.shape)
+
+print()
+
+transactions=[]
+for i in range (0,20):
+    transactions.append([str(dataset.values[i,j]) for j in range(0,1)])
+    
+
+dataset = list(dataset["products"].apply(lambda x: x.split(',')))
+for transaction in dataset:
+    print(transaction)
+
+
+print()
+
+from apyori import apriori
+rules=apriori(transactions, min_support=0.003, min_confidence=0.003)
+rules
+
+results=list(rules)
+print(results)
+
+print()
+
+import pandas as pd
+from mlxtend.preprocessing import TransactionEncoder
+from mlxtend.frequent_patterns import apriori, association_rules
+
+# Load the dataset (replace with your actual data loading)
+dataset = pd.read_csv('GroceryStoreDataSet.csv', names=["products"]) 
+
+# Convert to the correct format for mlxtend, only if necessary
+if isinstance(dataset, pd.DataFrame):
+    transactions = dataset['products'].str.split(',').tolist()
+elif isinstance(dataset, list) and all(isinstance(item, str) for item in dataset):
+    transactions = [s.split(',') for s in dataset]  
+else:
+    # Assuming dataset is already a list of lists
+    transactions = dataset  
+
+te = TransactionEncoder()
+te_ary = te.fit(transactions).transform(transactions)
+df_encoded = pd.DataFrame(te_ary, columns=te.columns_)
+
+# Apply Apriori and generate rules
+frequent_itemsets = apriori(df_encoded, min_support=0.2, use_colnames=True)
+rules = association_rules(frequent_itemsets, metric="lift", min_threshold=1.0)
+
+# Print the rules
+for index, rule in rules.iterrows():
+    print(f"Rule: {', '.join(list(rule['antecedents']))} -> {', '.join(list(rule['consequents']))}")
+    print(f"Support: {rule['support']:.2f}")
+    print(f"Confidence: {rule['confidence']:.2f}")
+    print(f"Lift: {rule['lift']:.2f}")
+    print("=============================")
+
+print()
+
+print(len(results))
+
+
+
+Market Basket Analysis is a popular data mining technique used to uncover associations or patterns between items in large transaction datasets. This code performs market basket analysis on a dataset named GroceryStoreDataSet.csv using both the apyori and mlxtend libraries in Python. The aim is to discover association rules — such as which products are frequently bought together — to help businesses make informed decisions regarding promotions, store layout, and inventory management.
+
+The analysis begins with reading the dataset using the Pandas library, where each row contains a list of products purchased together in a transaction. The dataset is preprocessed by splitting each product entry into individual items using Python’s string manipulation techniques, thereby transforming it into a list of transactions. This format is essential because association rule mining algorithms, such as Apriori, require input data in a transactional format — a list of item lists.
+
+In the first part of the code, the apyori library is used to apply the Apriori algorithm. The transactions list is generated, and the apriori() function is applied with very low minimum support and confidence thresholds (0.003), allowing the model to extract a larger number of item associations, even if they are rare. The result is a list of association rules containing details like support, confidence, and lift, though they are printed as raw objects without extensive formatting.
+
+In the second part, a more robust and customizable analysis is performed using the mlxtend library. Here, TransactionEncoder converts the list of transactions into a one-hot encoded DataFrame, where each column represents an item and each row a transaction. The apriori() function is then used to find frequent itemsets based on a specified minimum support threshold (0.2 in this case). After identifying frequent itemsets, the association_rules() function extracts rules with a minimum lift of 1.0, which ensures the rules found have meaningful impact.
+
+Each generated rule is interpreted using three key metrics: Support, which measures how frequently the itemset appears in the dataset; Confidence, which indicates how often the rule has been found to be true; and Lift, which measures how much more likely the consequent is purchased when the antecedent is purchased, compared to being purchased independently. Higher lift values suggest stronger associations. The rules are printed in a readable format, clearly showing which items imply the purchase of others.
+
+This end-to-end process effectively demonstrates how Apriori-based association rule mining can extract actionable insights from grocery store transactions. These insights can be used in recommendation systems, product bundling, or optimizing retail strategies. By using both apyori and mlxtend, the code showcases two approaches to rule generation — one simpler and quick, and the other more flexible and detailed.

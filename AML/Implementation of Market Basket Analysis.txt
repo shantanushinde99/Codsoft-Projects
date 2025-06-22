@@ -1,0 +1,65 @@
+import pandas as pd
+from mlxtend.frequent_patterns import fpgrowth
+from mlxtend.frequent_patterns import association_rules
+import numpy as np
+from apyori import apriori
+
+data = pd.read_csv('Day1.csv')
+print(data.head())
+
+print()
+
+encoded_data = pd.get_dummies(data)
+print(encoded_data)
+print()
+
+frequent_itemsets = fpgrowth(encoded_data, min_support=0.01, use_colnames=True)
+print(frequent_itemsets)
+print()
+
+rules = association_rules(frequent_itemsets, metric="lift", min_threshold=1)
+print(rules.sort_values('lift', ascending=False).head(10))
+print()
+
+st_df=pd.read_csv("Market_Basket_Optimisation.csv",header=None)
+print(st_df)
+print()
+
+#converting dataframe into list of lists
+l=[]
+for i in range(1,7501):
+    l.append([str(st_df.values[i,j]) for j in range(0,20)])
+    
+#applying apriori algorithm
+association_rules = apriori(l, min_support=0.0045, min_confidence=0.2, min_lift=3, min_length=2)
+association_results = list(association_rules)
+
+for i in range(0, len(association_results)):
+    print(association_results[i][0])
+    
+for item in association_results:
+    # first index of the inner list
+    # Contains base item and add item
+    pair = item[0]
+    items = [x for x in pair]
+    print()
+    print("Rule: " + items[0] + " -> " + items[1])
+    # second index of the inner list
+    print("Support: " + str(item[1]))
+    # third index of the list located at 0th position
+    # of the third index of the inner list
+    print("Confidence: " + str(item[2][0][2]))
+    print("Lift: " + str(item[2][0][3]))
+    print("-----------------------------------------------------")
+
+
+
+The given code illustrates advanced techniques in association rule mining using two popular algorithms: FP-Growth and Apriori, applied on two different datasets. The primary objective of association rule mining is to discover relationships among items in transactional datasets, which can be used for decision-making in areas like retail marketing, recommendation systems, and inventory planning.
+
+The first part of the code works on a dataset named Day1.csv, where the transactional data is assumed to be in a tabular format indicating the presence or absence of items. To make the data suitable for rule mining, it is encoded using one-hot encoding via pd.get_dummies(). This transforms categorical variables into a binary matrix, where each column represents a product and each row a transaction. The FP-Growth algorithm, available via the mlxtend library, is then applied. FP-Growth is an efficient and scalable algorithm for mining frequent itemsets without candidate generation. It uses a data structure called the FP-tree to encode transactions compactly. The code sets a minimum support threshold of 0.01 to identify frequent itemsets. After that, the association_rules() function is used to derive rules from these itemsets, focusing on those with a lift of at least 1.0. The results include rules sorted by lift, which helps identify the strongest associations in the dataset.
+
+In the second part, the code uses a dataset called Market_Basket_Optimisation.csv, which contains up to 20 items per transaction and 7500 total transactions. Each transaction is read into a list of lists, converting the tabular data into a format suitable for the Apriori algorithm from the apyori library. Apriori is a classic algorithm that works by identifying frequent itemsets through iterative candidate generation and pruning based on support. It is slower than FP-Growth for large datasets but provides clear interpretability. The algorithm is configured with a minimum support of 0.0045, a minimum confidence of 0.2, a minimum lift of 3, and a rule length of at least 2. These parameters ensure that the resulting rules are both meaningful and actionable.
+
+The rules generated from Apriori are printed with their metrics: Support, which shows how often the itemset occurs in the dataset; Confidence, which tells how often the consequent appears when the antecedent is present; and Lift, which compares the observed frequency of the rule against its expected frequency if the items were independent. High lift values suggest strong relationships between items. Each rule is printed in a human-readable format, showing the direction of the implication and the associated metrics.
+
+Overall, this code demonstrates how FP-Growth and Apriori algorithms can be used effectively for market basket analysis. It highlights the trade-offs between algorithm efficiency and interpretability and shows how to extract, evaluate, and present association rules from transactional data. These insights can help businesses improve cross-selling strategies, design product bundles, and enhance customer experiences by understanding purchasing patterns.

@@ -1,0 +1,111 @@
+import tensorflow as tf
+from tensorflow.keras import layers
+import numpy as np
+import matplotlib.pyplot as plt
+import os
+
+# Hyperparameters
+BUFFER_SIZE = 50000
+BATCH_SIZE = 128
+NOISE_DIM = 100
+EPOCHS = 100
+
+# Load and preprocess CIFAR-10
+(train_images, _), (_, _) = tf.keras.datasets.cifar10.load_data()
+train_images = (train_images.astype('float32') - 127.5) / 127.5  # Normalize to [-1, 1]
+train_dataset = tf.data.Dataset.from_tensor_slices(train_images).shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
+
+# Generator model (simplified)
+def build_generator():
+    model = tf.keras.Sequential([
+        layers.Dense(8 * 8 * 128, input_shape=(NOISE_DIM,)),
+        layers.LeakyReLU(),
+        layers.Reshape((8, 8, 128)),
+        layers.Conv2DTranspose(64, (4, 4), strides=2, padding='same', activation='relu'),
+        layers.Conv2DTranspose(3, (4, 4), strides=2, padding='same', activation='tanh')
+    ])
+    return model
+
+# Discriminator model (simplified)
+def build_discriminator():
+    model = tf.keras.Sequential([
+        layers.Conv2D(64, (4, 4), strides=2, padding='same', input_shape=(32, 32, 3)),
+        layers.LeakyReLU(),
+        layers.Flatten(),
+        layers.Dense(1)
+    ])
+    return model
+
+# Instantiate models
+generator = build_generator()
+discriminator = build_discriminator()
+
+# Loss and optimizers
+cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+gen_optimizer = tf.keras.optimizers.Adam(1e-4)
+disc_optimizer = tf.keras.optimizers.Adam(1e-4)
+
+# Training step
+@tf.function
+def train_step(images):
+    noise = tf.random.normal([BATCH_SIZE, NOISE_DIM])
+
+    with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
+        generated = generator(noise, training=True)
+
+        real_output = discriminator(images, training=True)
+        fake_output = discriminator(generated, training=True)
+
+        gen_loss = cross_entropy(tf.ones_like(fake_output), fake_output)
+        disc_loss = cross_entropy(tf.ones_like(real_output), real_output) + \
+                    cross_entropy(tf.zeros_like(fake_output), fake_output)
+
+    gradients_gen = gen_tape.gradient(gen_loss, generator.trainable_variables)
+    gradients_disc = disc_tape.gradient(disc_loss, discriminator.trainable_variables)
+
+    gen_optimizer.apply_gradients(zip(gradients_gen, generator.trainable_variables))
+    disc_optimizer.apply_gradients(zip(gradients_disc, discriminator.trainable_variables))
+
+    return gen_loss, disc_loss
+
+# Generate and save images
+def generate_images(model, epoch, test_input):
+    predictions = model(test_input, training=False)
+    predictions = (predictions * 127.5 + 127.5).numpy().astype(np.uint8)
+
+    fig = plt.figure(figsize=(4, 4))
+    for i in range(predictions.shape[0]):
+        plt.subplot(4, 4, i+1)
+        plt.imshow(predictions[i])
+        plt.axis('off')
+    plt.savefig(f'image_epoch_{epoch:03d}.png')
+    plt.close()
+
+# Training loop
+seed = tf.random.normal([16, NOISE_DIM])
+for epoch in range(1, EPOCHS + 1):
+    gen_loss_total, disc_loss_total, batches = 0, 0, 0
+
+    for batch in train_dataset:
+        if batch.shape[0] != BATCH_SIZE:
+            continue
+        g_loss, d_loss = train_step(batch)
+        gen_loss_total += g_loss
+        disc_loss_total += d_loss
+        batches += 1
+
+    print(f'Epoch {epoch:03d}: Generator Loss = {gen_loss_total / batches:.4f}, Discriminator Loss = {disc_loss_total / batches:.4f}')
+
+    if epoch % 10 == 0:
+        generate_images(generator, epoch, seed)
+
+# Save models
+os.makedirs("saved_models", exist_ok=True)
+generator.save("saved_models/generator.h5")
+discriminator.save("saved_models/discriminator.h5")
+print("Training finished. Models saved.")
+
+
+This code implements a Generative Adversarial Network (GAN) to generate synthetic images resembling those from the CIFAR-10 dataset, which contains 32×32 color images across 10 classes. The dataset is first normalized to the range [-1, 1], preparing it for the generator’s tanh output. The GAN consists of two competing models: a generator and a discriminator. The generator takes random noise as input and transforms it into fake images through dense and transpose convolution layers. The discriminator, a CNN, classifies input images as real or fake using convolutional layers followed by flattening and dense output. Both models are trained simultaneously in an adversarial manner: the generator tries to produce realistic images to fool the discriminator, while the discriminator tries to correctly distinguish real from generated images.
+
+Training occurs in batches, where both networks update their weights using binary cross-entropy loss and the Adam optimizer. A fixed noise seed is used to visualize the generator’s progress every 10 epochs. The generator’s goal is to minimize the discriminator’s ability to identify fake images, eventually producing visually plausible outputs. This adversarial training dynamic allows the generator to improve over time. After training for 100 epochs, the final generator and discriminator models are saved. This implementation demonstrates the core idea behind GANs—unsupervised learning by adversarial training—and how they can synthesize high-quality image data.

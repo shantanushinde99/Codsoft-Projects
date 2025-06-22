@@ -1,0 +1,100 @@
+# Import necessary libraries
+import numpy as np
+import matplotlib.pyplot as plt
+from keras.datasets import reuters
+from keras import models, layers
+
+# Load the dataset
+(train_data, train_labels), (test_data, test_labels) = reuters.load_data(num_words=10000)
+
+# Reverse word index to decode newswire back to text
+word_index = reuters.get_word_index()
+reverse_word_index = {value: key for key, value in word_index.items()}
+decoded_newswire = ' '.join([reverse_word_index.get(i - 3, '?') for i in train_data[0]])
+
+# Vectorize sequences
+def vectorize_sequences(sequences, dimension=10000):
+    results = np.zeros((len(sequences), dimension))
+    for i, sequence in enumerate(sequences):
+        results[i, sequence] = 1.
+    return results
+
+x_train = vectorize_sequences(train_data)
+x_test = vectorize_sequences(test_data)
+
+# One-hot encode labels
+def to_one_hot(labels, dimension=46):
+    results = np.zeros((len(labels), dimension))
+    for i, label in enumerate(labels):
+        results[i, label] = 1.
+    return results
+
+one_hot_train_labels = to_one_hot(train_labels)
+one_hot_test_labels = to_one_hot(test_labels)
+
+# Build the model
+model = models.Sequential()
+model.add(layers.Dense(64, activation='relu', input_shape=(10000,)))
+model.add(layers.Dropout(0.3))
+model.add(layers.Dense(64, activation='relu'))
+model.add(layers.Dropout(0.3))
+model.add(layers.Dense(46, activation='softmax'))
+
+# Compile the model
+model.compile(
+    optimizer='rmsprop',
+    loss='categorical_crossentropy',
+    metrics=['accuracy']
+)
+
+# Split validation data
+x_val = x_train[:1000]
+partial_x_train = x_train[1000:]
+y_val = one_hot_train_labels[:1000]
+partial_y_train = one_hot_train_labels[1000:]
+
+# Train the model
+history = model.fit(
+    partial_x_train,
+    partial_y_train,
+    epochs=15,
+    batch_size=512,
+    validation_data=(x_val, y_val)
+)
+
+# Plot training and validation loss
+plt.figure(figsize=(10, 10))
+plt.plot(history.history['loss'], 'bo', label='Training loss')
+plt.plot(history.history['val_loss'], 'b', label='Validation loss')
+plt.title('Training and validation loss')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.legend()
+plt.show()
+
+# Plot training and validation accuracy
+plt.figure(figsize=(10, 10))
+plt.plot(history.history['accuracy'], 'bo', label='Training accuracy')
+plt.plot(history.history['val_accuracy'], 'b', label='Validation accuracy')
+plt.title('Training and validation accuracy')
+plt.xlabel('Epochs')
+plt.ylabel('Accuracy')
+plt.legend()
+plt.show()
+
+# Evaluate the model
+results = model.evaluate(x_test, one_hot_test_labels)
+print(f"Test loss and accuracy: {results}")
+
+# Predict using the model
+predictions = model.predict(x_test)
+print(f"Shape of prediction[0]: {predictions[0].shape}")
+print(f"Sum of prediction[0] (should be ~1): {np.sum(predictions[0])}")
+print(f"Predicted class for first test sample: {np.argmax(predictions[0])}")
+
+
+This Python code implements a multi-class classification model to categorize Reuters newswire articles into 46 topics using a deep learning approach. It starts by loading the dataset from Keras with a vocabulary size limited to the top 10,000 most frequent words. The sequences (representing word indices) are vectorized into binary format using a custom vectorize_sequences() function, converting each article into a fixed-length vector where each index indicates the presence of a word. The labels are also one-hot encoded to suit the multi-class classification task.
+
+The neural network is built using Keras’ Sequential API. It has two hidden layers with 64 neurons each and ReLU activation, along with dropout layers (30%) for regularization to reduce overfitting. The output layer uses the softmax activation function, which outputs a probability distribution across 46 classes. The model is compiled with the rmsprop optimizer and categorical_crossentropy loss, suitable for multi-class, one-hot encoded targets. Training is performed over 15 epochs with a batch size of 512, using a validation set split from the training data to monitor performance during training.
+
+The training and validation loss and accuracy are visualized using Matplotlib to check for overfitting or underfitting. Finally, the model is evaluated on the test set, and its accuracy and loss are printed. The model’s predictions are also demonstrated, showing that it outputs a probability distribution where the sum is approximately 1, and the most probable class is extracted using argmax. This showcases a complete pipeline for text classification, from preprocessing and model training to evaluation and prediction.

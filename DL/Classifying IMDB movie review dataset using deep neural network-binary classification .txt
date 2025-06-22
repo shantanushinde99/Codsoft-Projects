@@ -1,0 +1,81 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import tensorflow as tf
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Embedding, GlobalAveragePooling1D
+
+# Load the dataset
+df = pd.read_csv('IMDB Review.csv')  
+
+# Split features and labels
+texts = df['text'].astype(str).values
+labels = df['label'].values
+
+# Text preprocessing
+vocab_size = 10000
+max_len = 200
+oov_tok = "<OOV>"
+
+tokenizer = Tokenizer(num_words=vocab_size, oov_token=oov_tok)
+tokenizer.fit_on_texts(texts)
+sequences = tokenizer.texts_to_sequences(texts)
+padded = pad_sequences(sequences, maxlen=max_len, padding='post', truncating='post')
+
+# Split into training and testing sets
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(padded, labels, test_size=0.2, random_state=42)
+
+# Build the model
+model = Sequential([
+    Embedding(vocab_size, 16, input_length=max_len),
+    GlobalAveragePooling1D(),
+    Dense(16, activation='relu'),
+    Dense(1, activation='sigmoid')  # Binary classification
+])
+
+# Compile the model
+model.compile(optimizer='adam',
+              loss='binary_crossentropy',
+              metrics=['accuracy'])
+
+# Train the model
+history = model.fit(X_train, y_train,
+                    epochs=50,
+                    batch_size=512,
+                    validation_data=(X_test, y_test),
+                    verbose=1)
+
+# Evaluate the model
+loss, accuracy = model.evaluate(X_test, y_test)
+print(f"\nTest Accuracy: {accuracy:.4f}, Test Loss: {loss:.4f}")
+
+# Plotting Training & Validation Loss
+plt.figure(figsize=(10,5))
+plt.plot(history.history['loss'], 'b-o', label='Training Loss')
+plt.plot(history.history['val_loss'], 'r-o', label='Validation Loss')
+plt.title('Epoch vs Loss')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# Plotting Training & Validation Accuracy
+plt.figure(figsize=(10,5))
+plt.plot(history.history['accuracy'], 'g-o', label='Training Accuracy')
+plt.plot(history.history['val_accuracy'], 'orange', label='Validation Accuracy')
+plt.title('Epoch vs Accuracy')
+plt.xlabel('Epochs')
+plt.ylabel('Accuracy')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+This code performs binary sentiment analysis on the IMDB dataset using a simple deep learning model. The dataset is loaded from a CSV file containing movie reviews and their corresponding sentiment labels. The text data is preprocessed using the Tokenizer from Keras, which converts text into integer sequences with a vocabulary size limited to 10,000 words. Unknown words are handled with a special token <OOV>, and all sequences are padded or truncated to a fixed length of 200 for uniform input shape.
+
+The padded sequences and labels are split into training and test sets using an 80-20 ratio. A neural network is then built using the Sequential API. The model includes an Embedding layer that transforms word indices into dense vectors, followed by a GlobalAveragePooling1D layer that reduces the sequence to a fixed-size vector. A dense hidden layer with ReLU activation is added, followed by a final sigmoid layer that outputs a probability for binary classification (positive or negative sentiment). The model is compiled with the adam optimizer and binary_crossentropy loss function, ideal for binary outputs.
+
+Training is done over 50 epochs with a batch size of 512 and validation on the test set to monitor performance. After training, the model is evaluated on test data, and accuracy and loss are reported. Finally, training and validation loss and accuracy are visualized using Matplotlib, helping to understand the model's learning behavior over epochs and detect signs of overfitting or underfitting.

@@ -1,0 +1,99 @@
+import numpy as np
+
+# State and Action Mappings
+state_to_index = {'A': 0, 'B': 1, 'C': 2, 'D': 3, 'E': 4}
+index_to_state = {0: 'A', 1: 'B', 2: 'C', 3: 'D', 4: 'E'}
+
+# Reward Matrix
+reward_matrix = np.array([
+    [0, 1, 0, 0, 1],
+    [1, 0, 1, 0, 0],
+    [0, 1, 0, 1, 0],
+    [0, 0, 1, 0, 1],
+    [0, 0, 0, 1, 0]
+])
+print("Reward Matrix:")
+print('')
+print(reward_matrix)
+print('')
+
+# Parameters
+gamma = 0.95  # Discount factor
+alpha = 0.1   # Learning rate
+print("Discount Factor (Gamma):", gamma)
+print('')
+
+# Q-Learning Variables
+state_size = len(state_to_index)
+action_size = state_size
+Q_matrix = np.zeros([state_size, action_size])
+
+# Q-Learning Update Function
+def q_learning_update(s, a, reward, s2):
+    Q_matrix[s, a] = (1 - alpha) * Q_matrix[s, a] + alpha * (reward + gamma * np.max(Q_matrix[s2, :]))
+    return s2
+
+# Get Action Using Epsilon-Greedy Policy
+def get_action(state, epsilon=0.1):
+    if np.random.random() < epsilon:
+        return np.random.choice(action_size)
+    return np.argmax(Q_matrix[state, :])
+
+# Finding Optimal Route Using Q-Learning
+def find_optimal_route(initial_state, goal_state, episodes=1000):
+    for _ in range(episodes):
+        state = initial_state
+        while state != goal_state:
+            action = get_action(state)
+            next_state = action
+            reward = reward_matrix[state, action]
+            state = q_learning_update(state, action, reward, next_state)
+    return Q_matrix
+
+# Main Execution
+initial_state = state_to_index['A']
+goal_state = state_to_index['E']
+Q_matrix = find_optimal_route(initial_state, goal_state)
+
+print("Q-matrix:")
+print('')
+print(Q_matrix)
+print('')
+
+optimal_actions = [index_to_state[np.argmax(Q_matrix[state, :])] for state in range(state_size)]
+print("Optimal Actions for each state:", optimal_actions)
+
+
+# Calculate Immediate Rewards
+for state in state_to_index:
+    for action in state_to_index:
+        state_idx = state_to_index[state]
+        action_idx = state_to_index[action]
+        immediate_reward = reward_matrix[state_idx, action_idx]
+        print(f"Immediate Reward for moving from state {state} to state {action}: {immediate_reward}")
+        
+
+# Calculate Discounted Reward for a Sequence
+action_sequence = ['A', 'B', 'C', 'D', 'E']
+discounted_reward = 0
+current_gamma = 1
+
+for i in range(len(action_sequence) - 1):
+    state = state_to_index[action_sequence[i]]
+    next_state = state_to_index[action_sequence[i + 1]]
+    reward = reward_matrix[state, next_state]
+    discounted_reward += current_gamma * reward
+    current_gamma *= gamma
+
+print("Discounted Reward for the action sequence:", discounted_reward)
+
+
+This code demonstrates a fundamental implementation of Q-Learning, a model-free reinforcement learning algorithm used to find the optimal path or policy in a given environment. In this example, the environment consists of five states labeled ‘A’ to ‘E’. The transitions between these states and their associated rewards are defined in a reward matrix, where the entry at position (i, j) represents the reward received for moving from state i to state j. A reward of 1 indicates a valid and beneficial move, while a reward of 0 indicates either an invalid or neutral transition.
+
+The agent begins learning using an initially zero-valued Q-matrix, which gets updated through interaction with the environment. The Q-matrix stores the expected future rewards for taking an action from a given state. The Q-learning update rule incorporates a learning rate alpha and a discount factor gamma. The learning rate determines how quickly the algorithm adapts to new information, while the discount factor controls the importance of future rewards. For each episode, the agent starts at an initial state and moves toward a predefined goal state by selecting actions using an epsilon-greedy strategy, which balances exploration (trying new actions) and exploitation (choosing the best-known action).
+
+During each move, the agent selects an action (i.e., a possible next state), receives the reward from the reward matrix, and updates the Q-matrix using the Bellman equation. This process is repeated over multiple episodes to ensure the agent has explored and learned the value of different routes. After training, the Q-matrix holds the learned optimal values for moving from each state to all other states, and the optimal action for each state is derived by selecting the action (state) with the highest Q-value.
+
+The code also calculates and prints immediate rewards for each possible state-to-state transition using the reward matrix, helping visualize direct relationships in the environment. Furthermore, it evaluates the discounted reward for a predefined action sequence (A -> B -> C -> D -> E) to show how the accumulated reward decays over time based on the discount factor. This demonstrates how Q-Learning considers not only immediate gains but also future benefits when learning optimal policies.
+
+In conclusion, this implementation effectively illustrates key reinforcement learning concepts, including state-action representation, reward structures, epsilon-greedy action selection, and discounted cumulative rewards. It serves as a foundational model for route optimization, robotics navigation, game AI, and any application where learning from trial and error in an unknown environment is critical.

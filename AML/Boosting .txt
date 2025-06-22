@@ -1,0 +1,68 @@
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.metrics import accuracy_score
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Load dataset
+iris = load_iris()
+X, y = iris.data, iris.target
+
+# Split data
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+# Initial AdaBoost training and testing
+clf = AdaBoostClassifier(n_estimators=50, learning_rate=1, random_state=42)
+cv_scores = cross_val_score(clf, X_train, y_train, cv=5)
+print("Cross-validation scores:", cv_scores)
+print("Mean cross-validation score:", cv_scores.mean())
+
+clf.fit(X_train, y_train)
+y_pred = clf.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+print("Test set accuracy:", accuracy)
+
+# Evaluate performance with different numbers of trees
+n_estimators_values = [10, 50, 100, 500, 1000, 5000]
+cv_scores_mean = []
+
+for n_estimators in n_estimators_values:
+    clf = AdaBoostClassifier(n_estimators=n_estimators, learning_rate=1, random_state=42)
+    cv_scores = cross_val_score(clf, X_train, y_train, cv=5)
+    cv_scores_mean.append(cv_scores.mean())
+
+plt.figure(figsize=(8, 5))
+plt.plot(n_estimators_values, cv_scores_mean, marker='o')
+plt.xlabel('Number of Trees')
+plt.ylabel('Mean Cross-Validation Score')
+plt.title('AdaBoost Performance with Different Numbers of Trees')
+plt.grid(True)
+plt.show()
+
+# Evaluate performance with different learning rates
+learning_rates = np.linspace(0.1, 2, 20)
+cv_scores_mean = []
+
+for learning_rate in learning_rates:
+    clf = AdaBoostClassifier(n_estimators=50, learning_rate=learning_rate, random_state=42)
+    cv_scores = cross_val_score(clf, X_train, y_train, cv=5)
+    cv_scores_mean.append(cv_scores.mean())
+
+plt.figure(figsize=(8, 5))
+plt.plot(learning_rates, cv_scores_mean, marker='o')
+plt.xlabel('Learning Rate')
+plt.ylabel('Mean Cross-Validation Score')
+plt.title('AdaBoost Performance with Different Learning Rates')
+plt.grid(True)
+plt.show()
+
+This code showcases the implementation and evaluation of the AdaBoost (Adaptive Boosting) algorithm on the popular Iris dataset, a multiclass classification problem involving three species of flowers. AdaBoost is an ensemble learning method that combines multiple weak learners (typically decision trees) to form a strong classifier. The algorithm works by focusing more on the samples that were misclassified by previous learners, thereby iteratively improving performance.
+
+The process begins by loading the Iris dataset and splitting it into training and testing sets. An initial AdaBoostClassifier with 50 estimators and a learning rate of 1 is trained using the training data. The model is evaluated using 5-fold cross-validation, providing a mean score that reflects the generalization ability of the model. The trained classifier is also tested on the unseen test set, and the accuracy score is computed to assess real-world performance.
+
+To analyze how AdaBoost's performance varies with different configurations, two experiments are conducted. First, the number of weak learners (decision trees) is varied across several values: 10, 50, 100, 500, 1000, and 5000. For each configuration, 5-fold cross-validation is performed, and the mean scores are plotted. This experiment helps determine how increasing the number of trees influences the model's performance and when diminishing returns or overfitting might occur.
+
+In the second experiment, the learning rate, which controls how much each weak learner contributes to the final model, is varied from 0.1 to 2.0. Again, cross-validation scores are collected for each value, and the results are plotted. This analysis shows how model performance responds to changes in the learning rate, highlighting the importance of tuning this hyperparameter for optimal results.
+
+Overall, this code effectively demonstrates the strengths of AdaBoost in terms of flexibility and performance, and how hyperparameter tuning (number of estimators and learning rate) can significantly impact classification accuracy. It also emphasizes the value of cross-validation as a robust technique for model evaluation. By using visual plots, the code provides clear insights into how boosting parameters influence the learning process, helping to select the best configuration for maximum model performance.

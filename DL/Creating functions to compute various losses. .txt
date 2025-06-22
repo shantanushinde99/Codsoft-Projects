@@ -1,0 +1,63 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+
+data = pd.read_csv("ObesityDataSet_raw_and_data_sinthetic.csv")
+print("Data loaded successfully!")
+print(data.head())
+
+#Drop missing values 
+data.dropna(inplace=True)
+
+#Encode categorical columns using LabelEncoder
+label_encoders = {}
+for column in data.select_dtypes(include=['object']).columns:
+    le = LabelEncoder()
+    data[column] = le.fit_transform(data[column])
+    label_encoders[column] = le
+
+#Separate features (X) and target (y)
+X = data.drop("NObeyesdad", axis=1)
+y = data["NObeyesdad"]
+
+#Encode the target column
+target_encoder = LabelEncoder()
+y = target_encoder.fit_transform(y)
+
+#Normalize input features
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+#Train-test split
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
+
+#Build the Sequential model
+model = Sequential()
+model.add(Dense(10, activation='relu', input_shape=(X_train.shape[1],)))
+model.add(Dense(8, activation='relu'))
+model.add(Dense(len(np.unique(y)), activation='softmax'))  # For multi-class output
+
+#Compile the model
+model.compile(
+    optimizer='adam',
+    loss='sparse_categorical_crossentropy',  # Use 'mse' or 'mae' for regression
+    metrics=['accuracy']
+)
+
+#Train the model
+print("Training the model...")
+history = model.fit(X_train, y_train, epochs=20, validation_data=(X_test, y_test))
+
+#Evaluate the model
+loss, accuracy = model.evaluate(X_test, y_test)
+print(f"\nTest Loss: {loss}")
+print(f"Test Accuracy: {accuracy}")
+
+
+This Python code builds a deep learning classification model using the Obesity dataset. It starts by importing necessary libraries (pandas, numpy, sklearn, and tensorflow). The dataset is loaded and cleaned by dropping any missing values. All categorical columns, including the target column NObeyesdad, are encoded into numerical values using LabelEncoder, preparing them for model training. Features (X) are separated from the target (y), and the input features are normalized using StandardScaler to ensure all values have a similar scale, which is important for efficient neural network training.
+
+The data is then split into training and testing sets using an 80-20 ratio. A neural network model is created using the Sequential API with two hidden layers (10 and 8 neurons, both using ReLU activation) and an output layer with softmax activation, suited for multi-class classification. The model is compiled using the Adam optimizer and the sparse_categorical_crossentropy loss function. It is trained over 20 epochs with validation on the test set to monitor performance. Finally, the model is evaluated on test data to report its loss and accuracy, completing the standard preprocessing, model training, and evaluation cycle in a deep learning workflow.

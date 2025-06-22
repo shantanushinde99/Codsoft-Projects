@@ -1,0 +1,66 @@
+import warnings
+import tensorflow as tf
+from tensorflow.keras.applications import VGG16, ResNet50, MobileNet
+from tensorflow.keras.applications.vgg16 import preprocess_input as vgg_preprocess
+from tensorflow.keras.applications.resnet50 import preprocess_input as resnet_preprocess
+from tensorflow.keras.applications.mobilenet import preprocess_input as mobilenet_preprocess
+from tensorflow.keras.preprocessing import image
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Suppress all warnings
+warnings.filterwarnings("ignore")
+
+# Define the path to your image
+image_path = r'C:\Users\HP\OneDrive\Documents\Deep Learning\Practicals\Practical no.3\pexels.jpg'
+
+def preprocess_image(image_path, target_size, preprocessing_func):
+    """
+    Load and preprocess an image for a given model.
+
+    Parameters:
+    - image_path (str): Path to the image file.
+    - target_size (tuple): The target size for the image (width, height).
+    - preprocessing_func (function): The preprocessing function specific to the model.
+
+    Returns:
+    - numpy.ndarray: The preprocessed image ready for prediction.
+    """
+    img = image.load_img(image_path, target_size=target_size)  # Load image and resize
+    img_array = image.img_to_array(img)  # Convert to array
+    img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
+    img_array = preprocessing_func(img_array)  # Apply model-specific preprocessing
+    return img_array
+
+def predict_and_display(model, input_data, model_name):
+        preds = model.predict(input_data)  # Make prediction
+    decoded_preds = tf.keras.applications.imagenet_utils.decode_predictions(preds, top=3)[0]  # Get top-3 predictions
+    print(f"\n{model_name} Predictions:")
+    for i, (imagenet_id, label, score) in enumerate(decoded_preds):
+        print(f"{i + 1}. {label} ({score:.4f})")
+
+# Load Pre-trained Models
+vgg16_model = VGG16(weights='imagenet')
+resnet50_model = ResNet50(weights='imagenet')
+mobilenet_model = MobileNet(weights='imagenet')
+
+# Preprocess the image for each model
+vgg_input = preprocess_image(image_path, (224, 224), vgg_preprocess)
+resnet_input = preprocess_image(image_path, (224, 224), resnet_preprocess)
+mobilenet_input = preprocess_image(image_path, (224, 224), mobilenet_preprocess)
+
+# Make predictions and display results for each model
+predict_and_display(vgg16_model, vgg_input, "VGG16")
+predict_and_display(resnet50_model, resnet_input, "ResNet50")
+predict_and_display(mobilenet_model, mobilenet_input, "MobileNet")
+
+# Display the original image
+img = image.load_img(image_path)
+plt.imshow(img)
+plt.axis("off")
+plt.show()
+
+
+This Python code demonstrates how to use pre-trained deep learning models (VGG16, ResNet50, and MobileNet) from TensorFlow’s Keras Applications module to classify an image. It begins by importing required libraries and suppressing warnings for cleaner output. An image is loaded from a given file path, resized to 224x224 pixels (the standard input size for these models), converted to a NumPy array, expanded to include a batch dimension, and then preprocessed using each model's specific preprocessing function. This step is crucial as each model expects input in a particular format (e.g., scaled pixel values).
+
+Three models — VGG16, ResNet50, and MobileNet — are loaded with pre-trained weights from ImageNet, which allows them to classify images without needing retraining. The image is passed through each model to get prediction probabilities, which are then decoded to display the top 3 predicted classes with confidence scores using ImageNet's label mappings. Finally, the original image is displayed using Matplotlib. This script highlights the concept of transfer learning and inference, where knowledge from large-scale models trained on massive datasets like ImageNet is reused to classify new images quickly and efficiently.

@@ -1,0 +1,139 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Dropout
+from tensorflow.keras.callbacks import EarlyStopping
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, mean_squared_error
+
+# Load the dataset
+file_path = "Churn_Modelling.csv"
+df = pd.read_csv(file_path)
+
+# Drop irrelevant columns
+df = df.drop(['RowNumber', 'CustomerId', 'Surname'], axis=1)
+
+# Separate features and target variable for classification
+X = df.drop('Exited', axis=1)
+y_classification = df['Exited']
+
+# Identify categorical and numerical columns
+categorical_features = ['Geography', 'Gender']
+numerical_features = [col for col in X.columns if col not in categorical_features]
+
+# Create transformers for preprocessing
+numeric_transformer = StandardScaler()
+categorical_transformer = OneHotEncoder(drop='first', sparse_output=False)
+
+# Combine transformers into a preprocessor
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', numeric_transformer, numerical_features),
+        ('cat', categorical_transformer, categorical_features)
+    ])
+
+# Apply transformations to the features
+X_transformed = preprocessor.fit_transform(X)
+
+# Split data into training and testing sets for classification
+X_train_clf, X_test_clf, y_train_clf, y_test_clf = train_test_split(X_transformed, y_classification, test_size=0.2, random_state=42)
+
+# Define the DNN model for classification
+model_clf = Sequential([
+    Dense(64, activation='relu', input_shape=(X_train_clf.shape[1],)),
+    Dropout(0.5),
+    Dense(32, activation='relu'),
+    Dropout(0.5),
+    Dense(1, activation='sigmoid')
+])
+
+# Compile the model
+model_clf.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+
+# Set early stopping to prevent overfitting
+early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+
+# Train the classification model
+history_clf = model_clf.fit(X_train_clf, y_train_clf, epochs=30, batch_size=32, validation_split=0.2, callbacks=[early_stopping])
+
+# Predict on the test set for classification
+y_pred_prob_clf = model_clf.predict(X_test_clf)
+y_pred_clf = (y_pred_prob_clf > 0.5).astype(int)
+
+# Calculate evaluation metrics for classification
+accuracy = accuracy_score(y_test_clf, y_pred_clf)
+precision = precision_score(y_test_clf, y_pred_clf)
+recall = recall_score(y_test_clf, y_pred_clf)
+f1 = f1_score(y_test_clf, y_pred_clf)
+
+print('Classification Model Evaluation:')
+print(f'Accuracy: {accuracy:.4f}')
+print(f'Precision: {precision:.4f}')
+print(f'Recall: {recall:.4f}')
+print(f'F1 Score: {f1:.4f}')
+
+# For regression, let's predict 'EstimatedSalary' as the target variable
+y_regression = df['EstimatedSalary']
+
+# Split data into training and testing sets for regression
+X_train_reg, X_test_reg, y_train_reg, y_test_reg = train_test_split(X_transformed, y_regression, test_size=0.2, random_state=42)
+
+# Define the DNN model for regression
+model_reg = Sequential([
+    Dense(64, activation='relu', input_shape=(X_train_reg.shape[1],)),
+    Dropout(0.5),
+    Dense(32, activation='relu'),
+    Dropout(0.5),
+    Dense(1)
+])
+
+# Compile the model
+model_reg.compile(optimizer='adam', loss='mean_squared_error')
+
+# Train the regression model
+history_reg = model_reg.fit(X_train_reg, y_train_reg, epochs=30, batch_size=32, validation_split=0.2, callbacks=[early_stopping])
+
+# Predict on the test set for regression
+y_pred_reg = model_reg.predict(X_test_reg)
+
+# Calculate Mean Squared Error and Root Mean Squared Error
+mse = mean_squared_error(y_test_reg, y_pred_reg)
+rmse = np.sqrt(mse)
+
+print('\nRegression Model Evaluation:')
+print(f'Mean Squared Error: {mse:.4f}')
+print(f'Root Mean Squared Error: {rmse:.4f}')
+
+import matplotlib.pyplot as plt
+
+# Plot training & validation accuracy values
+plt.figure(figsize=(12, 6))
+
+plt.subplot(1, 2, 1)
+plt.plot(history_clf.history['accuracy'])
+plt.plot(history_clf.history['val_accuracy'])
+plt.title('Model accuracy')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.legend(['Train', 'Validation'], loc='upper left')
+
+# Plot training & validation loss values
+plt.subplot(1, 2, 2)
+plt.plot(history_clf.history['loss'])
+plt.plot(history_clf.history['val_loss'])
+plt.title('Model loss')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.legend(['Train', 'Validation'], loc='upper left')
+
+plt.tight_layout()
+plt.show()
+
+This Python code builds two deep learning models—one for classification and another for regression—using the Churn Modelling dataset. Initially, it loads the dataset and drops irrelevant columns like RowNumber, CustomerId, and Surname. It separates features (X) and the classification target (Exited), identifies categorical (Geography, Gender) and numerical features, and applies preprocessing using a ColumnTransformer that combines StandardScaler for numerical data and OneHotEncoder for categorical data. The transformed features are then split into training and test sets.
+
+For classification, a deep neural network is defined with dense layers and dropout for regularization, using sigmoid activation in the final layer for binary output. It is compiled with binary_crossentropy loss and adam optimizer. Early stopping is used to prevent overfitting. After training, predictions are made, and performance is evaluated using accuracy, precision, recall, and F1-score. The model effectively learns to predict whether a customer will churn.
+
+For regression, the same features are used to predict EstimatedSalary as the target variable. A separate DNN is defined with a linear output layer and trained using mean squared error (MSE) as the loss. Evaluation includes both MSE and Root Mean Squared Error (RMSE). Finally, plots visualize training and validation accuracy and loss for the classification model, helping assess model learning and potential overfitting.

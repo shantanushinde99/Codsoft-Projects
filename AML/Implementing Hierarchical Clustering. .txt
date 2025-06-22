@@ -1,0 +1,33 @@
+import numpy
+import matplotlib.pyplot as plt
+from sklearn.cluster import AgglomerativeClustering
+import pandas as pd
+dataset=pd.read_csv("Mall_Customers.csv")
+print(dataset.head())
+x=dataset.iloc[:,[3,4]].values
+import scipy.cluster.hierarchy as sch
+dendrogram=sch.dendrogram(sch.linkage(x,method="ward"))
+plt.title("Dendogram Plot")
+plt.ylabel("Euclidean Distance")
+plt.show()
+
+
+# Ensure x is defined before using it
+# Example: x should be a 2D NumPy array with at least two features
+# x = your_dataset_here
+
+hc = AgglomerativeClustering(n_clusters=5, metric="euclidean", linkage="ward")
+y_pred = hc.fit_predict(x)
+
+# Correct module name from 'mtp' to 'plt'
+plt.scatter(x[y_pred == 0, 0], x[y_pred == 0, 1], s=100, c="red", label="Cluster 1")
+plt.scatter(x[y_pred == 1, 0], x[y_pred == 1, 1], s=100, c="blue", label="Cluster 2")
+plt.scatter(x[y_pred == 2, 0], x[y_pred == 2, 1], s=100, c="green", label="Cluster 3")
+plt.scatter(x[y_pred == 3, 0], x[y_pred == 3, 1], s=100, c="cyan", label="Cluster 4")
+plt.scatter(x[y_pred == 4, 0], x[y_pred == 4, 1], s=100, c="magenta", label="Cluster 5")
+
+plt.title("Clusters of Customers")
+plt.xlabel("Annual Income")
+plt.ylabel("Spending Score")
+plt.legend()
+plt.show()
